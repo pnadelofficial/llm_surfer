@@ -86,22 +86,11 @@ class Searcher:
                 congress = raw.split('/')[2][:3]
                 bill_no = raw.split('?')[0].split('/')[-1]
                 self.results.append((title, congress, bill_no))
-            # try:
             current_page+=1
             if current_page > max_pages:
                 more_pages = False
             else:
                 self.webdriver.get(url+f"&page={current_page}")
-       
-            
-#             .execute_script("window.scrollTo(0, document.body.scrollHeight)")
-#             next_button = WebDriverWait(self.webdriver, 15).until(
-#                 EC.element_to_be_clickable((By.CLASS_NAME, "next"))
-#             )
-#             next_button.click()
-            #except Exception as e:
-                # print(e)
-                # more_pages = False
         self.webdriver.close()
 
     def _congress_scrape(self, tup):
@@ -192,8 +181,7 @@ class Searcher:
             soup = BeautifulSoup(body_html, 'html.parser')
             full_text = ' '.join([d.get_text().replace('\n', '') for d in soup.find_all('div', {'class':'section'})])
             if full_text == '':
-                full_text = ' '.join([p.get_text().replace('\n', '') for p in soup.find_all('p')]) # soup.get_text().replace('\n', '')
-
+                full_text = ' '.join([p.get_text().replace('\n', '') for p in soup.find_all('p')]) 
         self.webdriver.close()
         return url, full_text
 
@@ -217,6 +205,7 @@ class Searcher:
                         pass
                 else:
                     url, text = self.scrape_from_url(result['href'])
+                    
                     title = result['title']
 
                     if text == '':
@@ -227,7 +216,7 @@ class Searcher:
                                 print('New result added.')
                                 break
                     else:
-                        self.results_list.append((url, title, text))
+                        self.results_list.append((url, title, text, 'No date found', ''))
                 pbar.update(1)
         return self.results_list
 
@@ -276,7 +265,7 @@ class RAG:
         query_embedding = self.model.encode(self.retrieval_instruction+self.query, device=self.device, convert_to_tensor=True, normalize_embeddings=True)
         context_idxs = (self.embeddings.to(self.device) @ query_embedding.to(self.device)).argsort().cpu().numpy()
         self.context = [self.chunks[i] for i in context_idxs[::-1][:self.top_k]]
-        return "\n".join(self.context)
+        return "\n".join(self.context), self.context
 
     def __call__(self):
         return self._sim_search()
@@ -309,7 +298,8 @@ class LLMSurfer:
             print("No content found on this site. Passing...")
             print('--'*50)
             return None
-        res_str = RAG(self.query, embeddings, chunks, model=embedder.model)()
+        res_str, context_chunks = RAG(self.query, embeddings, chunks, model=embedder.model)()
+        del embedder.model
         filled_prompt = self.base_prompt.format(research_goal=self.research_goal, url=re.escape(url), title=re.escape(title), text=re.escape(res_str))
         filled_prompt_list = [{"role":"user", "content":filled_prompt}]
         input_to_jsonformer = self.tokenizer.apply_chat_template(
@@ -317,7 +307,7 @@ class LLMSurfer:
             tokenize=False,
             add_generation_prompt=True
         )
-        return self.jsonformer_partial(input_to_jsonformer)(), chunks
+        return self.jsonformer_partial(input_to_jsonformer)(), context_chunks
 
     def __call__(self, to_excel=True, num_rel_chunks=5):
         self.searcher = Searcher(query=self.query, max_results=self.max_results, search_engine=self.search_engine)
@@ -336,7 +326,10 @@ class LLMSurfer:
                     continue
                 relevancy = out['relevancy']
                 print(f"Result {i+1}: {relevancy}, {result[1]} because: {out['comment']}")
-                rel_docs[result[0]] = {'title':result[1], 'url':result[0], 'relevancy':relevancy, 'llm_comment':out['comment'], 'year': date, 'alternative_title':alt_title}
+                if self.search_engine == 'congress':
+                    rel_docs[result[0]] = {'title':result[1], 'url':result[0], 'relevancy':relevancy, 'llm_comment':out['comment'], 'year': date, 'alternative_title':alt_title}
+                else:
+                    rel_docs[result[0]] = {'title':result[1], 'url':result[0], 'relevancy':relevancy, 'llm_comment':out['comment']}
                 for key, value in out.items():
                     if key not in ['title', 'url', 'relevancy', 'comment']:
                         rel_docs[result[0]][key] = value
