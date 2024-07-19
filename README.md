@@ -10,4 +10,4 @@ The LLM Surfer was presented in a short paper published and presented as a part 
 
 This work is very priliminary! I will be updating this repo with changes as they arise. If you would like to contribute, I would be happy to look over any pull requests or discuss the nature of your changes at length. 
 
--- Peter Nadel, Tufts Univerity, July 19th, 2024
+-- Peter Nadel, Tufts University, July 19th, 2024
