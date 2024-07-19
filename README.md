@@ -4,7 +4,7 @@ The LLM Surfer is a brief Python module that helps researchers scrape data from 
 * DuckDuckGo
 * OpenAlex
 
-The examples in this repo come from the work that I began with the Climate Policy Lab at the Fletcher School. That said, the utility of the concepts expounded in the LLM Surfer are applicable to many other fields, especially in the humanities and the social sciences.
+The examples in this repo come from the work that I began with the Climate Policy Lab at the Fletcher School. Design choices were made accordingly. That said, the utility of the concepts expounded in the LLM Surfer are applicable to many other fields, especially in the humanities and the social sciences.
 
 The LLM Surfer was presented in a short paper published and presented as a part of PEARC 2024: https://dl.acm.org/doi/10.1145/3626203.3670577. 
 
